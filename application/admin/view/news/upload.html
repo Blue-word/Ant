@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>upload测试</title>
+</head>
+<body>
+	<form action="{:U('V1/User/imgsupload')}" enctype="multipart/form-data" method="post">
+	<!-- <input type="file" name="image" /> -->
+	<!-- <input type="text" name="HTTP_TOKEN" value="" /> -->
+	<!-- <input type="text" name="name" value="blues"/> -->
+	<!-- <input type="text" name="cate_1" value="job"/>
+	<input type="text" name="rootpath" value="forum_image"/>
+	<input type="text" name="savepath" value="job"/>
+	<input type="text" name="cate_2" value="2"/>
+	<input type="text" name="title" value="图片上传模拟测试"/> -->
+	<input type="file" name="image[]" /> <br> 
+	<input type="file" name="image[]" /> <br> 
+	<input type="file" name="image[]" /> <br>
+	<input type="submit" value="上传" /> 
+	</form> 
+</body>
+</html>
