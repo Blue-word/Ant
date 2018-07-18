@@ -7,6 +7,7 @@ use think\Db;
 use think\File;
 use app\admin\logic\NewsCatLogic;
 use app\admin\controller\Uploadify;
+use think\cache\driver\Redis;
 
 
 class News extends Base {
@@ -26,20 +27,13 @@ class News extends Base {
 	}
 
 	public function category(){
-		$field = ('id,name');
-		$category = D('news_category');
-		$act = I('get.act','123');
-		$id = I('get.id');
-		if ($act == 'add') {
-			$cate = $category->where("cate=1")->field($field)->select();
-		}
-		if ($act == 'detail' || $act == 'edit') {
-			$cate = $category->where("cate=1")->field($field)->select();
-			$cate_info = $category->where('id',$id)->find();
-		}
+		$model = model('News');
+		$act = I('get.act','add');
+		$id = I('get.id',2);
+		$res = $model->getCategory($act,$id);
 		$this->assign('act',$act);
-		$this->assign('cate_list',$cate);
-		$this->assign('cate',$cate_info);
+		$this->assign('cate_list',$res['cate']);
+		$this->assign('cate',$res['cate_info']);
 		return $this->fetch();
 	}
 
@@ -121,54 +115,39 @@ class News extends Base {
         }
     }
 
-	public function newsList(){
-		$news = D('news');
-		//搜索关键词
-		$status = I('status');
-		$keywords = trim(I('keywords'));
-		$where['title'] = array('like', '%' . $keywords . '%');
-		$where['status'] = array('like', '%' . $status . '%');
-		if (I('category')) {
-			$where['cate'] = I('category');
+    public function newsList(){
+    	$redis = new Redis;
+    	$handler = $redis->handler();
+    	$cate = I('category',1);
+		$res = $handler->get('newlist_cate'.$cate);
+		if (!$res) {   	//未缓存
+			$newlist = M('news')->where('cate',$cate)->order('id desc')->select();
+			$handler->set('newlist_cate'.$cate,json_encode($newlist),600);
+			$res = json_decode($handler->get('newlist_cate'.$cate),true);
+		}else{		//已缓存
+			$res = json_decode($res,true);
 		}
-		//dump($where);
-		$p = input('p/d',1);
-		$res = $news->where($where)->order('id desc')->page("$p,7")->select();
+		$news_category = model('News')->getNewsCategory();	//新闻分类
 		if($res){
         	foreach ($res as $val){
         		$val['status'] = $this->news_status[$val['status']];
         		$val['is_topic'] = $this->is_topic_status[$val['is_topic']];
         		$val['statement'] = $this->news_statement[$val['statement']];
         		$val['create_time'] = date('Y-m-d H:i:s',$val['create_time']);
-        		if ($val['cate'] == 0) {
-        			$val['cate_name'] = "未选择分类";
-        		}
-        		else{
-        			$category_where['id'] = $val['cate'];
-        			$category_name_1 = D('news_category')->where($category_where)->find();
-					if ($category_name_1['cate'] == 2) {
-						$category_name_2 = D('news_category')->where('id',$category_name_1['pid'])->find();
-						$val['cate_name'] = $category_name_2['name'].'◆'.$category_name_1['name'];
-					}else{
-						$val['cate_name'] = $category_name_1['name'];
-					}
-        		}
-        		
+        		$val['cate_name'] = $news_category[$val['cate']];
         		$list[] = $val;
-        		//dump($val);
         	}
         }
-        //dump($status);
-		$count = D('news')->where($where)->count();
+        dump($list);
+		// $count = M('news')->where('cate',$cate)->count();
 		$pager = new Page($count,7);
 		$page = $pager->show();
-		$category = D('News_category')->select();//取出分类
 		$this->assign('news',$list);
 		$this->assign('status',$status);
 		$this->assign('page',$page);
 		$this->assign('pager',$pager);
-		$this->assign('category',$category);
-		return $this->fetch();
+		$this->assign('category',$news_category);
+		// return $this->fetch();
 	}
 
 	public function newsAdd(){
@@ -268,8 +247,8 @@ class News extends Base {
         	$this->error("操作失败",U('Admin/News/newsAdd',array('id'=>$data['id'])));
         }
 	}
-	public function aonewsAdd($url){
-		//$url = "http://www.sydneytoday.com/content/101731377359011";
+	public function aonewsAdd($url=''){
+		$url = "http://www.sydneytoday.com/content/101731377359011";
 		$type = 1;
 		$res = divQuery1($url);
 		//$result = (string)$res;
@@ -278,8 +257,8 @@ class News extends Base {
 		// echo M('news')->getLastSql();
 		
 		//print_r($res);
-		//var_dump($res);
-		return $res;
+		var_dump($res);
+		// return $res;
 	}
 
 	public function topicList(){
