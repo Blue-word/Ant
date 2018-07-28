@@ -269,4 +269,13 @@ return [
         0 => '原创',
         1 => '转载',
     ],
+
+    //日志配置
+    'LOG_SPLIT_TIME' => [ //log分割时间，单位为小时
+        'user_log' => 1
+    ],
+    'LOG_DEFAULT_SPLIT_TIME' => 2,//日志默认分割时间为2小时
+    'LOG_USER_PREFIX' => '/AntUserLogs',//前端用户日志
+    'LOG_BUSINESS_PREFIX' =>'/AntAdminLogs',//后端管理员日志
+    'LOG_DEFAULT_PATH' => '/Logs',//默认地址
 ];

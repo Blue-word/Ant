@@ -97,8 +97,8 @@ function divQuery1($url){
 
 function divQuery2($url){
     header("Content-Type: text/html; charset=UTF-8");
-    require("./public/plugins/phpQuery1.php");
-    $html = file_get_contents($url);
+    include_once("./public/plugins/phpQuery1.php");
+    $html = @file_get_contents($url);
     phpQuery::newDocumentHtml($html);
     $res = pq("#content");
     $result = (string)$res;
@@ -263,4 +263,18 @@ function request_post1($url = ''){
     $data = curl_exec($curl);
     curl_close($curl);
     return $data;
+}
+/**
+ * 字符串命名风格转换
+ * type 0 将Java风格转换为C的风格 1 将C风格转换为Java的风格
+ * @param string $name 字符串
+ * @param integer $type 转换类型
+ * @return string
+ */
+function parse_name($name, $type=0) {
+    if ($type) {
+        return ucfirst(preg_replace_callback('/_([a-zA-Z])/', function($match){return strtoupper($match[1]);}, $name));
+    } else {
+        return strtolower(trim(preg_replace("/[A-Z]/", "_\\0", $name), "_"));
+    }
 }

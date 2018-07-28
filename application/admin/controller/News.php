@@ -8,6 +8,7 @@ use think\File;
 use app\admin\logic\NewsCatLogic;
 use app\admin\controller\Uploadify;
 use think\cache\driver\Redis;
+use app\common\util\Log;
 
 
 class News extends Base {
@@ -17,6 +18,19 @@ class News extends Base {
 	private $is_topic_status;//是否为专题
 	private $news_statement;//是否为专题
 	private $category_able_id = array(1,2,3,4,5,6,7,8,9,10,11,12,13,14);
+	private $news_type = array(
+        '1'=>'top',
+        // '2'=>'aozhou',
+        '3'=>'guonei',
+        '4'=>'shehui',
+        '5'=>'guoji',
+        '6'=>'yule',
+        '7'=>'tiyu',
+        '8'=>'junshi',
+        '9'=>'keji',
+        '10'=>'caijing',
+        '11'=>'shishang',
+    );
 
 	public function _initialize(){
 		$this->news_status = C('NEWS_STATUS');
@@ -251,14 +265,7 @@ class News extends Base {
 		$url = "http://www.sydneytoday.com/content/101731377359011";
 		$type = 1;
 		$res = divQuery1($url);
-		//$result = (string)$res;
-		// $data['content'] = $res_1;
-		// $result = M('news')->add($data);
-		// echo M('news')->getLastSql();
-		
-		//print_r($res);
 		var_dump($res);
-		// return $res;
 	}
 
 	public function topicList(){
@@ -317,11 +324,9 @@ class News extends Base {
 	}
 
 	public function test(){
-		$id = I('get.id',171);
-		//$id = 50;
+		$id = I('get.id',978);
 		$res = M('news')->where('id',$id)->find();
 		$this->assign('list',$res);
-		//dump($id);
 		return $this->fetch();
 	}
 	public function test1(){
@@ -329,16 +334,7 @@ class News extends Base {
 		//$res = divQuery1($url,1);
 		// $url = 'http://sydney.jinriaozhou.com/content/101730473160005';
 		$res = http_request($url);
-		//$result = (string)$res;
-		//$data['content'] = $res;
-		//$d = M('news')->where("id=97")->save($data);
-		// var_dump($res);
-		// print_r($res);
-		
 		dump($res);
-		// dump($d);
-		// dump($result);
-		//return $this->fetch();
 	}
 
 	public function upload(){
@@ -367,31 +363,34 @@ class News extends Base {
 		
 		return $this->fetch();
 	}
-
+	/*
+	* 获取新闻，同时采集新闻内容
+	*/
 	public function getNewsList(){
-		$ao_url = 'http://app.jinriaozhou.com/news-au';
-		$all_url = 'http://v.juhe.cn/toutiao/index';
+		$ao_url = 'http://app.jinriaozhou.com/news-au';		//澳洲新闻数据
+		$all_url = 'http://v.juhe.cn/toutiao/index';		//聚合新闻数据
 		$appkey = '468c41b4c59a77a5047c1ccddf79ed70';
-		$post_url = I('post.url');
-		$type = I('post.type');
-		if ($type == 1 && $post_url == $ao_url) {
+		$post_url = I('post.url','http://v.juhe.cn/toutiao/index');
+		$type = I('post.type',3);
+		$news_type = $this->$news_type[$type];
+		if ($type == 0 && $post_url == $ao_url) {
 			$url = $post_url;
-			$code = 'true';
+			$code = 'jinriaozhou';
 		}
-		if ($type != 1 && $post_url == $all_url) {
-			$url = $post_url.'?type='.$type.'&key='.$appkey;
-			$code = 'false';
+		if ($type != 0 && $post_url == $all_url) {
+			$url = $post_url.'?type='.$news_type.'&key='.$appkey;
+			$code = 'juhe';
 		}
-        $url_res = request_post($url); 
+        $url_res = request_post($url);
         $arr = json_decode($url_res,true);
-        if ($code == 'true') {
+        if ($code == 'jinriaozhou') {
         	$list_arr = $arr['data']['bignews'];
         	if ($list_arr) {
         		foreach ($list_arr as $k => $v) {
 	        		$v['photo'] = implode(',', $v['photo']);//照片处理
 	        		$is_id = M('news')->where('_id',$v['_id'])->count();
 	        		if ($is_id) {
-	        			unset($v);
+	        			continue;
 	        		}else{
 	        			$data = array(
 		        			'_id' => $v['_id'],
@@ -406,55 +405,40 @@ class News extends Base {
 	        			);  
 	        			$res = M('news')->add($data);
 	        		}
-	        		dump($data);  		
         		}
         	}
         }
-        if ($code == 'false') {
+        if ($code == 'juhe') {
         	$list_arr = $arr['result']['data'];
         	if ($list_arr) {
-        		foreach ($list_arr as $k => $v) {
-					$pic_arr = array();
-					if ($v['thumbnail_pic_s']) {
-						$pic_arr[0] = $v['thumbnail_pic_s'];
-					}
-					if ($v['thumbnail_pic_s02']) {
-						$pic_arr[1] = $v['thumbnail_pic_s02'];
-					}
-					if ($v['thumbnail_pic_s03']) {
-						$pic_arr[2] = $v['thumbnail_pic_s03'];
-					}
-					
-	        		$photo = implode(',', $pic_arr);//照片处理
-	        		$is_id = M('news')->where('_id',$v['uniquekey'])->count();
-	        		if ($is_id) {
-	        			unset($v);
-	        		}else{
-	        			$data = array(
-		        			'_id' => $v['uniquekey'],
-		        			'title' => $v['title'],
-		        			'url' => $v['url'],
-		        			'picture' => $pic_arr,
-		        			'status' => 0,
-		        			'type' => 2,
-		        			'statement' => 1,
-		        			'source' => $v['author_name'],
-		        			'create_time' => time(),
-		        			'publish_time' => strtotime($v['date']),
-	        			);  
-	        			$res = M('news')->add($data);
-	        		}
-	        		dump($data);  		
-				}
+        		$res[$key] = model('news')->addNews($list_arr);
         	}
         }
-        // if ($res) {
-        // 	$this->success("操作成功",U('Admin/news/newsList'));
-        // }else{
-        // 	$this->error("操作失败",U('Admin/news/getNews'));
-        // }
-        //print_r($res);
-        //var_dump($list_arr);
+        if ($res) {
+        	$this->success("操作成功",U('Admin/news/newsList'));
+        }else{
+        	$this->error("操作失败",U('Admin/news/getNews'));
+        }
+	}
+	/*
+	* 定时任务,自动获取新闻,采集新闻内容
+	*/
+	public function autoGetNewsList(){
+		ini_set('memory_limit', '500M');
+        set_time_limit(0);//无超时验证
+		$all_url = 'http://v.juhe.cn/toutiao/index';		//聚合新闻数据
+		$appkey = '468c41b4c59a77a5047c1ccddf79ed70';
+		$news_type = $this->news_type;
+		foreach ($news_type as $key => $value) {
+			$url = $all_url.'?type='.$value.'&key='.$appkey;
+			$url_res = request_post($url);
+        	$arr = json_decode($url_res,true);
+        	$list_arr = $arr['result']['data'];
+        	if ($list_arr) {
+        		$res[$key] = model('news')->addNews($list_arr);
+        	}
+		}
+		var_dump($res);
 	}
 
 	

@@ -1,0 +1,81 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+        <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script>
+        <script src="https://cdn.bootcss.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+        <style>
+            table { table-layout: fixed; }
+            th,td { text-align:center; word-break:break-all}
+            pre { outline: 1px solid #ccc; padding: 5px; margin: 5px; }
+            .string { color: green; }
+            .number { color: darkorange; }
+            .boolean { color: blue; }
+            .null { color: magenta; }
+            .key { color: red; }
+
+            .err { background: #f2dede;border-color:#ebccd1; color:#a94442; }
+            .warn { background: #fcf8e3;border-color:#faebcc; color:#8a6d3b; }
+            .info { background: white }
+        </style>
+        <script>
+            $(function(){
+                var log = {$log};
+                for(var i in log){
+                    var clss = ''
+                    if (log[i]['level'] != undefined) {
+                        clss = log[i]['level'].toLowerCase(); 
+                    }
+                    var tr = $('<tr class="' +clss+ '"></tr>');
+                    for(var j in log[i]){
+                        if(j == 'level') continue;
+                        if (log[i][j] instanceof Object){
+                            var j = syntaxHighlight(log[i][j]);
+                            tr.append(
+                                $('<td style="text-align:left;"><pre>'+j+'</pre></td>')
+                            )
+                        } else {
+                            tr.append(
+                                $('<td style="vertical-align:middle">'+log[i][j]+'</td>')
+                            )
+                        }
+                    }
+                    tr.appendTo($('#content'));
+                }
+            })
+            function syntaxHighlight(json) {
+                if (typeof json != 'string') {
+                    json = JSON.stringify(json, undefined, 2);
+                }
+                json = json.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+                return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
+                    var cls = 'number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'key';
+                        } else {
+                            cls = 'string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <table class="table table-bored">
+            {if $header}
+            <thead>
+                {foreach from=$header item=h}
+                <th width="{$h[1]}%">{$h[0]}</th>
+                {/foreach}
+            </thead>
+            {/if}
+            <tbody id="content">
+            </tbody>
+        </table>
+    </body>
+</html>
