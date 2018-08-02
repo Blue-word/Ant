@@ -436,9 +436,25 @@ class News extends Base {
         	$list_arr = $arr['result']['data'];
         	if ($list_arr) {
         		$res[$key] = model('news')->addNews($list_arr);
+        		$log = array(
+                    'time' => time(),
+                    'request_url' => 'news/autoGetNewsList',
+                    'request_content' => array($res),
+                    'response_content' => array('code'=>'1','msg'=>'获取新闻成功'),
+                );
+        		Log::info( '/news/autoGetNewsList', $log );
         	}
 		}
+		$this->setCarouselPictureNews();
 		var_dump($res);
+	}
+	/**
+	 * 设置轮播图新闻
+	 *
+	 * @author 蓝勇强 2018-07-28
+	 */
+	public function setCarouselPictureNews(){
+		M('news')->where('cate',1)->order('id desc')->limit(5)->save(['is_rotation'=>1]);
 	}
 
 	
